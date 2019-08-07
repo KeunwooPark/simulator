@@ -64,6 +64,11 @@ class Simulator:
   def run(self, time_limit = 0.0):
     self._process("simulator/run", {"time_limit": time_limit})
 
+  def run_with_callback(self, callback):
+    self.remote.command("simulator/run", {"time_limit": 0.0}, timeout = 0)
+    while True:
+        callback()
+
   @accepts(int, (int, float))
   def step(self, frames = 1, framerate = 30.0):
     raise NotImplementedError()
@@ -104,6 +109,7 @@ class Simulator:
         self._process_events(j["events"])
         if self.stopped:
           break
+
       j = self.remote.command("simulator/continue")
 
   @accepts(str, AgentType, AgentState)
