@@ -1,3 +1,6 @@
+# Saze dataset
+*/saze/*/*.png
+
 # API build
 Api/build
 *.egg

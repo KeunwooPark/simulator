@@ -50,7 +50,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
     uint seqId;
 
     AsyncTextureReader<byte> Reader;
-    
+
     private byte[] jpegArray = new byte[1024 * 1024];
 
     private Camera renderCam;
@@ -72,7 +72,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
     public RenderTextureDisplayer cameraPreview;
 
     private void Awake()
-    {   
+    {
         if (!init)
         {
             Init();
@@ -135,7 +135,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
         Reader = new AsyncTextureReader<byte>(renderCam.targetTexture);
 
         GetComponentInParent<CameraSettingsManager>().AddCamera(renderCam);
-        
+
         addUIElement();
     }
 
@@ -185,7 +185,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
         if (TargetEnvironment == ROSTargetEnvironment.APOLLO35)
         {
             // TODO
-        }    
+        }
         else
         {
             VideoWriter = Bridge.AddWriter<Ros.Image>(TopicName);
@@ -308,11 +308,11 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
 #endif
 
             ImageIsBeingSent = true;
-            CyberVideoWriter.Publish(msg, () => ImageIsBeingSent = false);        
+            CyberVideoWriter.Publish(msg, () => ImageIsBeingSent = false);
         }
 
-        else 
-        {            
+        else
+        {
 
 #if USE_COMPRESSED
             var msg = new Ros.CompressedImage()
@@ -358,7 +358,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
             };
 #endif
             ImageIsBeingSent = true;
-            VideoWriter.Publish(msg, () => ImageIsBeingSent = false);            
+            VideoWriter.Publish(msg, () => ImageIsBeingSent = false);
             }
     }
 
@@ -398,6 +398,53 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
                     file.Write(bytes, 0, length);
                 }
                 return true;
+            }
+            catch
+            {
+            }
+        }
+        return false;
+    }
+
+    public bool SaveAsync(string path, int quality, int compression)
+    {
+        renderCam.Render();
+
+        Reader.Start();
+        Reader.Update(true);
+
+        var data = Reader.GetData();
+
+        var bytes = new byte[16 * 1024 * 1024];
+        int length;
+
+        var ext = System.IO.Path.GetExtension(path).ToLower();
+
+        if (ext == ".png")
+        {
+            length = PngEncoder.Encode(data, videoWidth, videoHeight, Reader.BytesPerPixel, compression, bytes);
+        }
+        else if (ext == ".jpeg" || ext == ".jpg")
+        {
+            length = JpegEncoder.Encode(data, videoWidth, videoHeight, Reader.BytesPerPixel, quality, bytes);
+        }
+        else
+        {
+            return false;
+        }
+
+        if (length > 0)
+        {
+            try
+            {
+              new System.Threading.Thread(()=>
+              {
+                using (var file = System.IO.File.Create(path))
+                {
+                    file.Write(bytes, 0, length);
+                }
+              }).Start();
+              return true;
             }
             catch
             {

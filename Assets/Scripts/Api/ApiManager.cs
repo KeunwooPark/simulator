@@ -109,7 +109,7 @@ namespace Api
                     }
                 }
             }
-            
+
             protected override void OnMessage(MessageEventArgs e)
             {
                 var json = JSONNode.Parse(e.Data);
@@ -169,7 +169,7 @@ namespace Api
 
         void Awake()
         {
-            groundLayer = LayerMask.NameToLayer("Ground And Road"); 
+            groundLayer = LayerMask.NameToLayer("Ground And Road");
 
             if (Instance != null)
             {

@@ -2,34 +2,19 @@ import saze
 import sys
 import lgsvl
 from lgsvl import Vector
+import argparse
+import sys
 
-def print_msg(self, msg):
-    print("Saze Scenario 0: {0}".format(msg))
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--uname`',
+        help='show and record video',
+        action='store_true'
+    )
 
-def open_simulator():
-    sim = lgsvl.Simulator(os.environ.get("SIMULATOR_HOST", "127.0.0.1"), 8181)
-    if sim.current_scene == "SimpleMap":
-        sim.reset()
-    else:
-        sim.load("SimpleMap")
+    return parser.parse_args()
 
-    return sim
-
-def spawn_ego(sim):
-    spawns = sim.get_spawn()
-
-    state = lgsvl.AgentState()
-    state.transform = spawns[0]
-    ego = sim.add_agent("XE_Rigged-apollo", lgsvl.AgentType.EGO, state)
-
-    return ego
-
-def get_gps_sensor(ego):
-    gps_sensor = None
-    for sensor in ego.get_sensors():
-        if sensor.name == "GPS":
-            gps_sensor = sensor
-    return gps_sensor
 
 def spawn_npc(sim):
     npc_pos = Vector(-48,0,-103)
@@ -54,7 +39,7 @@ def get_npc_event(sim, npc):
 
     return npc_event
 
-def get_main_callback(sim, npc, gps_sensor):
+def get_main_callback(sim, npc, gps_sensor, recorder = None):
     ego_trigger_point = Vector(-27,0,-78)
     dist_thrs = 25
 
@@ -67,9 +52,16 @@ def get_main_callback(sim, npc, gps_sensor):
         if dist < dist_thrs:
             npc_event.trigger()
 
+        if recorder:
+            print("capture called")
+            recorder.capture_img()
+            print("capture returned")
+            #recorder.show_img()
+            pass
+
     return callback
 
-def main():
+def main(args):
     app_tag = "Scenario 0"
     sim = saze.open_simulator("SimpleMap")
     saze.print_msg(app_tag, "Simulator opened")
@@ -81,8 +73,11 @@ def main():
     npc = spawn_npc(sim)
     saze.print_msg(app_tag,"NPC vehicle spawned")
 
-    main_callback = get_main_callback(sim, npc, gps_sensor)
+    cam_sensor = saze.get_main_camera_sensor(ego)
+    rec = saze.CamRecoder('test', cam_sensor)
+    main_callback = get_main_callback(sim, npc, gps_sensor, recorder = rec)
     sim.run_with_callback(main_callback)
 
 if __name__=="__main__":
-    main()
+    args = parse_args()
+    main(args)

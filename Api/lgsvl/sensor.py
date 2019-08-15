@@ -16,7 +16,7 @@ class Sensor:
     self.remote = remote
     self.uid = uid
     self.name = name
-    
+
   @property
   def transform(self):
     j = self.remote.command("sensor/transform/get", {"uid": self.uid})
@@ -79,6 +79,17 @@ class CameraSensor(Sensor):
       "compression": compression,
     })
     return success
+
+  @accepts(str, int, int)
+  def save_series(self, dir_path, img_id, compression = 6):
+      # save series of png files
+      success = self.remote.command("sensor/camera/save_series", {
+      "uid": self.uid,
+      "dir": dir_path,
+      "iid": img_id,
+      "compression": compression,
+      })
+      return success
 
 
 class LidarSensor(Sensor):
