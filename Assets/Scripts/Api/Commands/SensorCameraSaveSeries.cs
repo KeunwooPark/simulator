@@ -28,6 +28,7 @@ namespace Api.Commands
                     var camera = sensor as VideoToROS;
                     var dirPath = args["dir"].Value;
                     var imgId = args["iid"].AsInt;
+                    var quality = args["quality"].AsInt;
                     var compression = args["compression"].AsInt;
 
                     var pp = camera.GetComponent<PostProcessingBehaviour>();
@@ -38,8 +39,7 @@ namespace Api.Commands
                         pp.profile.motionBlur.enabled = false;
                     }
 
-                    var imgFileName = dirPath + "/" + imgId.ToString() + ".png";
-                    int quality = 100; // quality doesn't mean anything when .png
+                    var imgFileName = dirPath + "/" + imgId.ToString() + ".jpeg";
                     bool saveResult = camera.SaveAsync(imgFileName, quality, compression);
 
                     var result = new JSONObject();

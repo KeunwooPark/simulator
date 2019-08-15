@@ -80,13 +80,14 @@ class CameraSensor(Sensor):
     })
     return success
 
-  @accepts(str, int, int)
-  def save_series(self, dir_path, img_id, compression = 6):
+  @accepts(str, int, int, int)
+  def save_series(self, dir_path, img_id, quality = 75, compression = 6):
       # save series of png files
       success = self.remote.command("sensor/camera/save_series", {
       "uid": self.uid,
       "dir": dir_path,
       "iid": img_id,
+      "quality": quality,
       "compression": compression,
       })
       return success

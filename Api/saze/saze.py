@@ -16,8 +16,8 @@ def open_simulator(map_name, sim_host = "127.0.0.1", port = 8181):
 
     return sim
 def get_img_dir_name(uname, senario, cam_type):
-    pass
-    
+    return "{}_{}_{}".format(uname, senario, cam_type)
+
 def spawn_ego(sim, pos = None):
     state = lgsvl.AgentState()
     if pos:
@@ -57,6 +57,9 @@ def get_sensor(ego, sensor_name):
 
 def get_main_camera_sensor(ego):
     return get_sensor(ego, sensor_name = "Main Camera")
+
+def get_seg_camera_sensor(ego):
+    return get_sensor(ego, sensor_name = "Segmentation Camera")
 
 def get_npc_event(sim, npc, way_vecs, speeds):
     waypoints = []
@@ -117,5 +120,5 @@ class CamRecoder:
             cv2.waitKey(1)
 
     def capture_img(self):
-        rslt = self.cam_sensor.save_series(self.dir_path, self.img_id, compression=0)
+        rslt = self.cam_sensor.save_series(self.dir_path, self.img_id, quality = 100, compression=5)
         self.img_id += 1

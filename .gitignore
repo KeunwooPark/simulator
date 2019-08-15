@@ -1,5 +1,6 @@
 # Saze dataset
 */saze/*/*.png
+*/saze/*/*.jp*g
 
 # API build
 Api/build

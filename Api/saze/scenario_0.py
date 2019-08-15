@@ -8,9 +8,10 @@ import sys
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--uname`',
-        help='show and record video',
-        action='store_true'
+        '--uname',
+        help='user name',
+        required = True,
+        type=str
     )
 
     return parser.parse_args()
@@ -39,7 +40,7 @@ def get_npc_event(sim, npc):
 
     return npc_event
 
-def get_main_callback(sim, npc, gps_sensor, recorder = None):
+def get_main_callback(sim, npc, gps_sensor, recorders = None):
     ego_trigger_point = Vector(-27,0,-78)
     dist_thrs = 25
 
@@ -51,13 +52,9 @@ def get_main_callback(sim, npc, gps_sensor, recorder = None):
         dist = (ego_tr.position - ego_trigger_point).norm()
         if dist < dist_thrs:
             npc_event.trigger()
-
-        if recorder:
-            print("capture called")
-            recorder.capture_img()
-            print("capture returned")
-            #recorder.show_img()
-            pass
+        if recorders:
+            for rec in recorders:
+                rec.capture_img()
 
     return callback
 
@@ -73,9 +70,15 @@ def main(args):
     npc = spawn_npc(sim)
     saze.print_msg(app_tag,"NPC vehicle spawned")
 
-    cam_sensor = saze.get_main_camera_sensor(ego)
-    rec = saze.CamRecoder('test', cam_sensor)
-    main_callback = get_main_callback(sim, npc, gps_sensor, recorder = rec)
+    main_cam = saze.get_main_camera_sensor(ego)
+    main_dir_name = saze.get_img_dir_name(args.uname, "Scenario0", "main")
+    main_rec = saze.CamRecoder(main_dir_name, main_cam)
+
+    seg_cam = saze.get_seg_camera_sensor(ego)
+    seg_dir_name = saze.get_img_dir_name(args.uname, "Scenario0", "seg")
+    seg_rec = saze.CamRecoder(seg_dir_name, seg_cam)
+
+    main_callback = get_main_callback(sim, npc, gps_sensor, recorders = [main_rec, seg_rec])
     sim.run_with_callback(main_callback)
 
 if __name__=="__main__":
