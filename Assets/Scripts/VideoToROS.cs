@@ -40,7 +40,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
         SD,
         HD
     };
-    public ResolutionType resolutionType = ResolutionType.HD;
+    public ResolutionType resolutionType = ResolutionType.SD;
     private RenderTextureFormat rtFormat = RenderTextureFormat.ARGB32;
     private RenderTextureReadWrite rtReadWrite = RenderTextureReadWrite.sRGB;
     private int videoWidth = 1920;
