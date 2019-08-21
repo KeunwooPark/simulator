@@ -40,7 +40,8 @@ namespace Api.Commands
                     }
 
                     var imgFileName = dirPath + "/" + imgId.ToString() + ".jpeg";
-                    bool saveResult = camera.SaveAsync(imgFileName, quality, compression);
+                    var timeFileName = dirPath + "/" + imgId.ToString() + ".txt";
+                    bool saveResult = camera.SaveAsync(imgFileName, timeFileName, quality, compression);
 
                     var result = new JSONObject();
                     result.Add("success", "True");
@@ -61,12 +62,6 @@ namespace Api.Commands
                 ApiManager.Instance.SendError($"Sensor '{uid}' not found");
             }
         }
-
-        private void Save(VideoToROS camera)
-        {
-
-        }
-
         private static System.Random random = new System.Random();
         private static string RandomString(int length)
         {
