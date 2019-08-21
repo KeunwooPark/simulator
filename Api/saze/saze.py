@@ -105,7 +105,7 @@ class Event:
 class CamRecoder:
     def __init__(self, dir_name, cam_sensor, visualize = True):
         this_dir = os.path.dirname(os.path.abspath(__file__))
-        self.dir_path = "{}/{}".format(this_dir, dir_name)
+        self.dir_path = "{}/data/{}".format(this_dir, dir_name)
         self.cam_sensor = cam_sensor
         self.img = None
         self.img_id = 0
