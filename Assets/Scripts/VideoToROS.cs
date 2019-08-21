@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
 using Google.Protobuf;
-
+using System.Threading;
 
 [RequireComponent(typeof(Camera))]
 public class VideoToROS : MonoBehaviour, Comm.BridgeClient
@@ -40,7 +40,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
         SD,
         HD
     };
-    public ResolutionType resolutionType = ResolutionType.HD;
+    public ResolutionType resolutionType = ResolutionType.SD;
     private RenderTextureFormat rtFormat = RenderTextureFormat.ARGB32;
     private RenderTextureReadWrite rtReadWrite = RenderTextureReadWrite.sRGB;
     private int videoWidth = 1920;
@@ -50,7 +50,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
     uint seqId;
 
     AsyncTextureReader<byte> Reader;
-    
+
     private byte[] jpegArray = new byte[1024 * 1024];
 
     private Camera renderCam;
@@ -72,7 +72,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
     public RenderTextureDisplayer cameraPreview;
 
     private void Awake()
-    {   
+    {
         if (!init)
         {
             Init();
@@ -102,6 +102,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
             default:
                 break;
         }
+        resolutionType = ResolutionType.SD; // SAZE: Force to use SD
 
         switch (resolutionType)
         {
@@ -135,7 +136,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
         Reader = new AsyncTextureReader<byte>(renderCam.targetTexture);
 
         GetComponentInParent<CameraSettingsManager>().AddCamera(renderCam);
-        
+
         addUIElement();
     }
 
@@ -185,7 +186,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
         if (TargetEnvironment == ROSTargetEnvironment.APOLLO35)
         {
             // TODO
-        }    
+        }
         else
         {
             VideoWriter = Bridge.AddWriter<Ros.Image>(TopicName);
@@ -308,11 +309,11 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
 #endif
 
             ImageIsBeingSent = true;
-            CyberVideoWriter.Publish(msg, () => ImageIsBeingSent = false);        
+            CyberVideoWriter.Publish(msg, () => ImageIsBeingSent = false);
         }
 
-        else 
-        {            
+        else
+        {
 
 #if USE_COMPRESSED
             var msg = new Ros.CompressedImage()
@@ -358,7 +359,7 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
             };
 #endif
             ImageIsBeingSent = true;
-            VideoWriter.Publish(msg, () => ImageIsBeingSent = false);            
+            VideoWriter.Publish(msg, () => ImageIsBeingSent = false);
             }
     }
 
@@ -406,6 +407,59 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
         return false;
     }
 
+    public bool SaveAsync(string imgFileName, string timeFileName, int quality, int compression)
+    {
+        renderCam.Render();
+        DateTime renderTime = DateTime.Now;
+        Reader.Start();
+        Reader.Update(true);
+
+        var data = Reader.GetData();
+
+        var bytes = new byte[16 * 1024 * 1024];
+        int length;
+
+        var ext = System.IO.Path.GetExtension(imgFileName).ToLower();
+
+        if (ext == ".png")
+        {
+            length = PngEncoder.Encode(data, videoWidth, videoHeight, Reader.BytesPerPixel, compression, bytes);
+        }
+        else if (ext == ".jpeg" || ext == ".jpg")
+        {
+            length = JpegEncoder.Encode(data, videoWidth, videoHeight, Reader.BytesPerPixel, quality, bytes);
+        }
+        else
+        {
+            return false;
+        }
+
+        if (length > 0)
+        {
+            try
+            {
+              SaveAsync(bytes, length, imgFileName, timeFileName, renderTime);
+              return true;
+            }
+            catch
+            {
+            }
+        }
+        return false;
+    }
+
+    private void SaveAsync(byte[] bytes, int length, string imgFileName, string timeFileName, DateTime renderTime)
+    {
+      byte[] copiedBytes = new byte[length];
+      System.Array.Copy(bytes, copiedBytes, length);
+      string renderTimeStr = renderTime.ToString("MM/dd/yyyy hh:mm:ss.fff tt\n");
+
+      ImageSaveJob job = new ImageSaveJob(copiedBytes, length, imgFileName, timeFileName, renderTimeStr);
+
+      ThreadStart threadStart = new ThreadStart(job.Run);
+      new System.Threading.Thread(threadStart).Start();
+    }
+
     public void Enable(bool enable)
     {
         enabled = enable;
@@ -418,5 +472,32 @@ public class VideoToROS : MonoBehaviour, Comm.BridgeClient
         var cameraCheckbox = GetComponentInParent<UserInterfaceTweakables>().AddCheckbox(sensorName, $"Toggle {sensorName}:", init);
         cameraPreview = GetComponentInParent<UserInterfaceTweakables>().AddCameraPreview(sensorName, $"Toggle {sensorName}", renderCam);
         cameraCheckbox.onValueChanged.AddListener(x => Enable(x));
+    }
+
+    class ImageSaveJob
+    {
+      public byte[] bytes;
+      public int length;
+      public string imgFileName;
+      public string timeFileName;
+      public string renderTimeStr;
+
+      public ImageSaveJob(byte[] bytes, int length, string imgFileName, string timeFileName, string renderTimeStr)
+      {
+        this.bytes = bytes;
+        this.length = length;
+        this.imgFileName = imgFileName;
+        this.timeFileName = timeFileName;
+        this.renderTimeStr = renderTimeStr;
+      }
+
+      public void Run()
+      {
+        using (var file = System.IO.File.Create(imgFileName))
+        {
+            file.Write(bytes, 0, length);
+        }
+        System.IO.File.WriteAllText(timeFileName, renderTimeStr);
+      }
     }
 }

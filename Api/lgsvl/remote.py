@@ -58,7 +58,6 @@ class Remote(threading.Thread):
 
     data = json.dumps({"command": name, "arguments": args})
     asyncio.run_coroutine_threadsafe(self.websocket.send(data), self.loop)
-
     with self.cv:
       self.cv.wait_for(lambda: self.data is not None, timeout = timeout)
       data = self.data

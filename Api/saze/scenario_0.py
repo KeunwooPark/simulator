@@ -2,34 +2,19 @@ import saze
 import sys
 import lgsvl
 from lgsvl import Vector
+import argparse
+import sys
 
-def print_msg(self, msg):
-    print("Saze Scenario 0: {0}".format(msg))
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--uname',
+        help='user name',
+        type=str
+    )
 
-def open_simulator():
-    sim = lgsvl.Simulator(os.environ.get("SIMULATOR_HOST", "127.0.0.1"), 8181)
-    if sim.current_scene == "SimpleMap":
-        sim.reset()
-    else:
-        sim.load("SimpleMap")
+    return parser.parse_args()
 
-    return sim
-
-def spawn_ego(sim):
-    spawns = sim.get_spawn()
-
-    state = lgsvl.AgentState()
-    state.transform = spawns[0]
-    ego = sim.add_agent("XE_Rigged-apollo", lgsvl.AgentType.EGO, state)
-
-    return ego
-
-def get_gps_sensor(ego):
-    gps_sensor = None
-    for sensor in ego.get_sensors():
-        if sensor.name == "GPS":
-            gps_sensor = sensor
-    return gps_sensor
 
 def spawn_npc(sim):
     npc_pos = Vector(-48,0,-103)
@@ -54,7 +39,7 @@ def get_npc_event(sim, npc):
 
     return npc_event
 
-def get_main_callback(sim, npc, gps_sensor):
+def get_main_callback(sim, npc, gps_sensor, recorders = None):
     ego_trigger_point = Vector(-27,0,-78)
     dist_thrs = 25
 
@@ -66,11 +51,14 @@ def get_main_callback(sim, npc, gps_sensor):
         dist = (ego_tr.position - ego_trigger_point).norm()
         if dist < dist_thrs:
             npc_event.trigger()
+        if recorders:
+            for rec in recorders:
+                rec.capture_img()
 
     return callback
 
-def main():
-    app_tag = "Scenario 0"
+def main(args):
+    app_tag = "Scenario0"
     sim = saze.open_simulator("SimpleMap")
     saze.print_msg(app_tag, "Simulator opened")
     ego = saze.spawn_ego(sim)
@@ -81,8 +69,20 @@ def main():
     npc = spawn_npc(sim)
     saze.print_msg(app_tag,"NPC vehicle spawned")
 
-    main_callback = get_main_callback(sim, npc, gps_sensor)
+    recorders = None
+    if args.uname:
+        main_cam = saze.get_main_camera_sensor(ego)
+        main_dir_name = saze.get_img_dir_name(args.uname, app_tag, "main")
+        main_rec = saze.CamRecoder(main_dir_name, main_cam)
+
+        seg_cam = saze.get_seg_camera_sensor(ego)
+        seg_dir_name = saze.get_img_dir_name(args.uname, app_tag, "seg")
+        seg_rec = saze.CamRecoder(seg_dir_name, seg_cam)
+        recorders = [main_rec, seg_rec]
+
+    main_callback = get_main_callback(sim, npc, gps_sensor, recorders = recorders)
     sim.run_with_callback(main_callback)
 
 if __name__=="__main__":
-    main()
+    args = parse_args()
+    main(args)

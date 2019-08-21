@@ -2,6 +2,17 @@ import saze
 import sys
 import lgsvl
 from lgsvl import Vector
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--uname',
+        help='user name',
+        type=str
+    )
+
+    return parser.parse_args()
 
 def get_jeep1_event(sim, npc):
     waypoint_vecs = []
@@ -36,7 +47,7 @@ def get_sedan1_event(sim, npc):
 
     return saze.get_npc_event(sim, npc, waypoint_vecs, speeds)
 
-def get_main_callback(sim, sedan1, truck1, jeep1, gps_sensor):
+def get_main_callback(sim, sedan1, truck1, jeep1, gps_sensor, recorders = None):
 
     event_s1 = get_sedan1_event(sim, sedan1)
     event_t1 = get_truck1_event(sim, truck1)
@@ -58,11 +69,16 @@ def get_main_callback(sim, sedan1, truck1, jeep1, gps_sensor):
         if dist < event_s1_thrs:
             event_s1.trigger()
             pass
+
+        if recorders:
+            for rec in recorders:
+                rec.capture_img()
+
     return callback
 
-def main():
+def main(args):
     map_name = "Shalun"
-    app_tag = "Scenario 2"
+    app_tag = "Scenario2"
 
     ego_spawn_pos = Vector(-75, 0, -40)
     #ego_spawn_pos = Vector(-10, 0, -47)
@@ -85,8 +101,20 @@ def main():
     #truck2 = None
     jeep1 = saze.spawn_npc(sim, jeep1_spawn_pos, car_type = "Jeep")
 
-    callback = get_main_callback(sim, sedan1, truck1, jeep1, gps_sensor)
+    recorders = None
+    if args.uname:
+        main_cam = saze.get_main_camera_sensor(ego)
+        main_dir_name = saze.get_img_dir_name(args.uname, app_tag, "main")
+        main_rec = saze.CamRecoder(main_dir_name, main_cam)
+
+        seg_cam = saze.get_seg_camera_sensor(ego)
+        seg_dir_name = saze.get_img_dir_name(args.uname, app_tag, "seg")
+        seg_rec = saze.CamRecoder(seg_dir_name, seg_cam)
+        recorders = [main_rec, seg_rec]
+
+    callback = get_main_callback(sim, sedan1, truck1, jeep1, gps_sensor, recorders = recorders)
     sim.run_with_callback(callback)
 
 if __name__=="__main__":
-    main()
+    args = parse_args()
+    main(args)
